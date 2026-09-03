@@ -1,0 +1,239 @@
+Build a complete, production-quality frontend for a web application called "NutriCheck" (designed with easy-to-change branding tokens).
+
+The application's PRIMARY CORE PURPOSE is to analyze packaged food products, beverages, dietary supplements, and FMCG items sold in India for strict compliance with Indian Regulatory Laws, primarily the **Legal Metrology (Packaged Commodities) Rules, 2011** and **FSSAI Labelling & Display Regulations**. While nutrition and health scores are analyzed, the main focus is regulatory compliance, violation detection, and consumer protection.
+
+IMPORTANT:
+This is ONE complete, cohesive website. Do NOT divide the project into standalone modules owned by different developers. The entire website must share one unified design system and feel like a polished, commercial-grade product.
+
+==================================================
+TECH STACK
+==================================================
+
+Use:
+- React
+- Vite
+- JavaScript / JSX
+- Tailwind CSS
+- React Router (v6+)
+- Lucide React for icons
+- Recharts for analytics & charts
+
+Keep dependencies minimal, clean, and modern. Utilize reusable components and a clean folder structure.
+
+==================================================
+DESIGN DIRECTION & COLOR SYSTEM
+==================================================
+
+Use a clean, modern, trustworthy, and minimal visual philosophy (inspired by clean-tech and modern regulatory tools like Yuka/RegBite).
+
+Color Palette:
+- Primary Brand: #18B978
+- Dark Text / Accent: #17191C
+- App Background: #F7F8F6
+- Card Background: #FFFFFF
+- Status Green (Compliant / Pass): #16A34A
+- Status Yellow (Warning / Ambiguous): #F59E0B
+- Status Red (Violation / Non-Compliant): #DC2626
+- Muted Text: #6B7280
+- Borders: #E5E7EB
+
+Typography & Aesthetics:
+- Sans-serif font hierarchy (Inter or system sans-serif).
+- Ample whitespace, soft borders, clean card shadows.
+- Avoid excessive gradients, glassmorphism, or cyberpunk styles.
+- Smooth, subtle animations for scanning, modal popups, and score progress.
+
+==================================================
+GLOBAL COMPONENTS
+==================================================
+
+Create clean, reusable components under `src/components/`:
+- Navbar (with Role Switching for Demo/Testing: Consumer vs Inspector)
+- Footer & Sidebar
+- Button, Card, Input, Badge, Modal, Tooltip
+- ScoreCircle (Visual compliance gauge)
+- StatusIndicator (Green/Yellow/Red badge)
+- ProductCard, ViolationCard, RuleCard, ComplaintCard
+- UploadBox (Drag & Drop + Mobile Camera Capture state)
+- ScanningAnimation & ProgressBar
+- ChartCard (Using Recharts)
+
+==================================================
+ROUTES & DYNAMIC COMPLIANCE ARCHITECTURE
+==================================================
+
+Set up the following routes:
+
+PUBLIC & USER ROUTES:
+- `/` - Landing Page
+- `/login` - Login (With toggle for Consumer vs. Inspection Officer)
+- `/signup` - Registration
+- `/dashboard` - Consumer Dashboard
+- `/upload` - Label Scanner / OCR Upload
+- `/extraction` - OCR Data Review & Manual Override
+- `/analysis/:id` - Compliance & Analysis Results
+- `/complaint/new` - File a Consumer Complaint
+- `/complaints` - Consumer Complaint History
+- `/reports` - Generated Compliance Reports
+- `/profile` & `/settings`
+
+INSPECTION OFFICER / ADMIN ROUTES:
+- `/inspector/dashboard` - Regulatory Officer Control Center
+- `/inspector/rules` - Rule Management Engine (Add / Edit / Deactivate Legal Metrology & FSSAI Rules)
+- `/inspector/complaints` - Received Complaints & Formal Notice Dispatch Panel
+- `/inspector/audit/:id` - Official Inspection Verification Screen
+
+==================================================
+1. LANDING PAGE
+==================================================
+
+- Hero section highlighting "Empowering Indian Consumers & Regulatory Authorities with AI-Driven Label Verification."
+- Primary CTAs: "Scan Label Now" & "Report a Violation".
+- Showcase phone mockup demonstrating a live Legal Metrology scan (highlighting Net Quantity, MRP, Date of Mfg, FSSAI License, and Country of Origin checks).
+- Feature Breakdown:
+  1. Automated OCR Extraction (Front, Back, MRP Panel)
+  2. Legal Metrology 2011 & FSSAI Compliance Engine
+  3. Consumer Violation Reporting System
+  4. Real-time Regulatory Update Integration for Inspectors
+- Footer with legal disclaimers.
+
+==================================================
+2. DUAL AUTHENTICATION (LOGIN / SIGNUP)
+==================================================
+
+- Unified login screen allowing choice between **"Consumer"** and **"Regulatory / Inspection Officer"**.
+- Standard UI: Email, Password, Password Toggle, Mock Google OAuth, and Role Switcher.
+
+==================================================
+3. CONSUMER DASHBOARD
+==================================================
+
+- Quick Stats: Total Scans, Compliant Products, Violations Detected, Complaints Filed.
+- Quick Actions: "Scan New Label", "File a Complaint", "Browse Regulatory Guidelines".
+- Recent Scans Table/Grid displaying Product Name, Manufacturer, Compliance Score, and Primary Violation Tag (e.g., "Missing Unit Sale Price" or "Font Size Non-Compliant").
+
+==================================================
+4. SCAN & OCR EXTRACTION EXPERIENCE
+==================================================
+
+Upload/Scan Screen (`/upload`):
+- Drag & Drop zone supporting front label, back label, ingredients list, and MRP/Mandatory Declarations panel.
+- Camera-capture mode for mobile viewports.
+- Realistic scanning animation with step-by-step progress:
+  Step 1: Image pre-processing & binarization
+  Step 2: Legal Metrology mandatory field recognition
+  Step 3: FSSAI License number & ingredient extraction
+  Step 4: Evaluating against active rule database
+  Step 5: Generating compliance scorecard
+
+Extraction Verification Screen (`/extraction`):
+- Display extracted fields with OCR Confidence Scores:
+  * Brand Name & Manufacturer Details
+  * Net Quantity / Volume (with unit verification)
+  * MRP (Inclusive of all taxes)
+  * Month & Year of Manufacture/Packing
+  * Country of Origin
+  * FSSAI License Number (14 digits)
+  * Consumer Care details
+  * Unit Sale Price (USP) as per mandatory Legal Metrology norms
+- Allow user to correct/edit extracted text before running the analysis engine.
+
+==================================================
+5. COMPLIANCE ANALYSIS PAGE (`/analysis/:id`)
+==================================================
+
+Top Header:
+- Product Thumbnail, Title, Manufacturer, Category.
+- Overall Compliance Score (0 to 100).
+- Quick Status: e.g., "NON-COMPLIANT (2 Legal Metrology Violations Detected)".
+
+Score System:
+- Deductions based on rule severity (High: -20, Medium: -10, Low: -5).
+- Transparent score breakdown showing deduction breakdown based on dynamic rules.
+
+Sections:
+1. **Legal Metrology & Declaration Checklist**:
+   - Highlighting required declarations: MRP, Net Wt, Mfg Date, Expiry/Best Before, Consumer Care, Country of Origin, Unit Sale Price.
+   - Status indicators for each required item.
+2. **Violations & Risk Cards**:
+   - Issue Name
+   - Specific Clause (e.g., *Legal Metrology Rules 2011, Rule 6(1)(n)*)
+   - Severity Level (HIGH / MED / LOW)
+   - Extracted Evidence vs. Mandatory Legal Requirement
+   - Legal Penalty Reference
+3. **Nutritional & Ingredient Overview**:
+   - Secondary breakdown of ingredients, additives, and nutrition facts.
+4. **Action Bar**:
+   - "Download Official Audit Report (PDF)"
+   - "File Complaint to Inspection Authority" (Pre-fills product data into complaint wizard).
+
+==================================================
+6. CONSUMER COMPLAINT SYSTEM (`/complaint/new`)
+==================================================
+
+- Multi-step form for consumers to report misleading labels, omitted declarations, or illegal overcharging.
+- Step 1: Upload label/receipt proof.
+- Step 2: Select specific violations (e.g., "Missing Unit Sale Price", "FSSAI Logo Font size too small", "No Country of Origin").
+- Step 3: Enter Purchase Details (Retailer Name, Location/City, Purchase Date).
+- Step 4: Submit to Inspector Enforcement Panel.
+- Generates a tracking ID (e.g., `NC-COMP-2026-8841`).
+
+==================================================
+7. INSPECTION OFFICER PORTAL
+==================================================
+
+Officer Dashboard (`/inspector/dashboard`):
+- High-level oversight of reported violations across regions/brands.
+- Key Metrics: Active Complaints, Pending Audits, Updated Rules, Notices Dispatched.
+- Recent Consumer Complaints Feed with filters (By City, Severity, Violation Type).
+
+Rule Management Engine (`/inspector/rules`):
+- Interface where inspectors can **Add**, **Edit**, **Deactivate**, or **Modify Severity** of regulatory rules.
+- Rule Form Fields:
+  * Rule Title (e.g., Mandatory Unit Sale Price Declaration)
+  * Regulatory Body (Legal Metrology / FSSAI / Bureau of Indian Standards)
+  * Act / Clause Reference (e.g., Legal Metrology Rule 6(11))
+  * Requirement Description
+  * Deduction Penalty Weight
+  * Effective Date
+  * Enforcement Status (Active / Draft / Archived)
+- Demonstrates how products scanned in the future are checked against both legacy rules and newly added inspector rules.
+
+Inspector Action Center (`/inspector/complaints`):
+- Review submitted consumer complaints and label evidence side-by-side.
+- Options:
+  * "Issue Show-Cause Notice to Manufacturer"
+  * "Escalate for Local Physical Inspection"
+  * "Dismiss / Insufficient Evidence"
+- Generates a downloadable formal notice draft.
+
+==================================================
+8. RULE ENGINE & DATA ARCHITECTURE
+==================================================
+
+Structure files under `src/regulations/`:
+- `ruleEngine.js`: Evaluates extracted OCR JSON against active rules array.
+- `legalMetrologyRules.js`: Mock dataset mirroring Legal Metrology 2011 provisions (MRP, Net Qty, Country of Origin, USP, Manufacturer address).
+- `fssaiRules.js`: Mock dataset for FSSAI labelling (License validity, Allergen declarations, Veg/Non-Veg logo).
+
+Ensure local state / Mock API services store newly added inspector rules so that running a new scan immediately evaluates against both built-in and newly added rules!
+
+==================================================
+9. MOCK DATA & SERVICES
+==================================================
+
+Organize mock files in `src/data/` and mock APIs in `src/services/`:
+- `ocrService.js` (Simulates OCR parsing with realistic latency)
+- `ruleService.js` (Handles fetching, adding, and updating rules)
+- `complaintService.js` (Handles storing and updating complaint statuses)
+- Realistic mock data for products (e.g., packaged snacks, dairy items, imported confectioneries, health supplements).
+
+==================================================
+10. RESPONSIVENESS & FINISH
+==================================================
+
+- Mobile-first optimization across all screens (especially for the upload scanner and consumer complaint forms).
+- Clean empty states, loading states, and error boundary handling.
+- Clear role switching toggle in the top bar so a user testing the demo can easily switch between "Consumer Mode" and "Inspector Mode".
+
+Build out the full UI, components, routing, and simulated backend workflows in React, Vite, and Tailwind CSS.
