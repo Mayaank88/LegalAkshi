@@ -1,9 +1,20 @@
-import { type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  ClerkProvider,
+  Show,
+  SignIn,
+  SignUp,
+  useAuth,
+  useClerk,
+  useUser,
+} from '@clerk/react';
+import { publishableKeyFromHost } from '@clerk/react/internal';
+import { shadcn } from '@clerk/themes';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { Link, Route, Switch, Router as WouterRouter, useLocation, useParams } from 'wouter';
+import { Link, Redirect, Route, Switch, Router as WouterRouter, useLocation, useParams } from 'wouter';
 import {
   ArrowLeft, ArrowRight, BadgeCheck, BarChart3, Bell, BookOpen, Box, Check, CheckCircle2,
   ChevronRight, CircleAlert, ClipboardCheck, FileCheck2, FileText, Filter, HelpCircle,
@@ -15,6 +26,72 @@ import {
   type Complaint, type Product, type Rule, type Status, getStored, initialComplaints,
   initialRules, products, setStored,
 } from '@/lib/mock-data';
+
+const clerkPubKey = publishableKeyFromHost(
+  window.location.hostname,
+  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
+);
+const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+function stripBase(path: string) {
+  return basePath && path.startsWith(basePath)
+    ? path.slice(basePath.length) || '/'
+    : path;
+}
+
+if (!clerkPubKey) {
+  throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY in .env file');
+}
+
+const clerkAppearance = {
+  theme: shadcn,
+  cssLayerName: 'clerk',
+  options: {
+    logoPlacement: 'inside' as const,
+    logoLinkUrl: basePath || '/',
+    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
+  },
+  variables: {
+    colorPrimary: '#18B978',
+    colorForeground: '#173A2A',
+    colorMutedForeground: '#718078',
+    colorDanger: '#C24743',
+    colorBackground: '#FFFFFF',
+    colorInput: '#FBFCFB',
+    colorInputForeground: '#20382B',
+    colorNeutral: '#DCE7DF',
+    fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
+    borderRadius: '0.75rem',
+  },
+  elements: {
+    rootBox: 'w-full flex justify-center',
+    cardBox: 'bg-white rounded-2xl w-[440px] max-w-full overflow-hidden',
+    card: '!shadow-none !border-0 !bg-transparent !rounded-none',
+    footer: '!shadow-none !border-0 !bg-transparent !rounded-none',
+    headerTitle: 'text-[#173A2A] font-extrabold tracking-[-.04em]',
+    headerSubtitle: 'text-[#718078]',
+    socialButtonsBlockButtonText: 'text-[#30473A] font-semibold',
+    formFieldLabel: 'text-[#42554A] font-bold',
+    footerActionLink: 'text-[#12885C] font-bold',
+    footerActionText: 'text-[#718078]',
+    dividerText: 'text-[#718078]',
+    identityPreviewEditButton: 'text-[#12885C]',
+    formFieldSuccessText: 'text-[#12885C]',
+    alertText: 'text-[#8D3834]',
+    logoBox: 'mb-3',
+    logoImage: 'max-h-10',
+    socialButtonsBlockButton: 'border-[#DCE7DF] bg-white hover:bg-[#F3F8F5]',
+    formButtonPrimary: 'bg-[#18B978] hover:bg-[#119E67] text-white shadow-[0_5px_12px_rgba(24,185,120,.18)]',
+    formFieldInput: 'border-[#DCE7DF] bg-[#FBFCFB] text-[#20382B]',
+    footerAction: 'bg-transparent',
+    dividerLine: 'bg-[#E6EEE8]',
+    alert: 'bg-[#FCE6E4] border-[#F0C9C6]',
+    otpCodeFieldInput: 'border-[#DCE7DF] bg-[#FBFCFB]',
+    formFieldRow: 'text-[#42554A]',
+    main: 'bg-transparent',
+  },
+};
 
 const queryClient = new QueryClient();
 function Logo({ compact = false }: { compact?: boolean }) {
@@ -46,10 +123,14 @@ function StatusBadge({ status }: { status: Status }) {
 function AppShell({ children, role, setRole }: { children: ReactNode; role: 'consumer' | 'officer'; setRole: (role: 'consumer' | 'officer') => void }) {
   const [location, setLocation] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user } = useUser();
+  const { signOut } = useClerk();
   const consumerNav = [{ href: '/dashboard', label: 'Overview', icon: Home }, { href: '/upload', label: 'Scan a label', icon: ScanLine }, { href: '/complaints', label: 'My complaints', icon: ClipboardCheck }, { href: '/reports', label: 'Reports', icon: FileText }];
   const officerNav = [{ href: '/inspector/dashboard', label: 'Overview', icon: Home }, { href: '/inspector/rules', label: 'Rule library', icon: BookOpen }, { href: '/inspector/complaints', label: 'Enforcement queue', icon: ClipboardCheck }];
   const nav = role === 'consumer' ? consumerNav : officerNav;
   const isActive = (href: string) => location === href || (href !== '/dashboard' && location.startsWith(href));
+  const displayName = user?.firstName || user?.fullName || (role === 'consumer' ? 'Consumer' : 'Officer');
+  const initials = `${user?.firstName?.[0] || displayName[0] || 'N'}${user?.lastName?.[0] || ''}`.toUpperCase();
   return <div className="grain flex min-h-[100dvh] bg-[#F7F8F6]">
     <aside className={`fixed inset-y-0 left-0 z-40 flex w-[252px] flex-col border-r border-[#e1e9e3] bg-[#fbfcfa] px-4 py-5 transition-transform duration-300 md:static md:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
       <div className="mb-9 flex items-center justify-between px-2"><Logo /><button className="text-[#75847b] md:hidden" onClick={() => setMobileOpen(false)} data-testid="button-close-menu"><X size={20} /></button></div>
@@ -67,14 +148,14 @@ function AppShell({ children, role, setRole }: { children: ReactNode; role: 'con
         <Link href="/settings" className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-[#64736b] hover:bg-[#eef4ef]" data-testid="link-settings"><Settings size={17} />Settings</Link>
         <div className="my-3 h-px bg-[#e6ece7]" />
         <button onClick={() => { const next = role === 'consumer' ? 'officer' : 'consumer'; setRole(next); setLocation(next === 'consumer' ? '/dashboard' : '/inspector/dashboard'); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-[#64736b] hover:bg-[#eef4ef]" data-testid="button-switch-role"><Users size={17} />Switch to {role === 'consumer' ? 'officer' : 'consumer'} view</button>
-        <Link href="/" className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-[#64736b] hover:bg-[#eef4ef]" data-testid="link-logout"><LogOut size={17} />Sign out</Link>
+         <button onClick={() => signOut({ redirectUrl: basePath || '/' })} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-[#64736b] hover:bg-[#eef4ef]" data-testid="button-logout"><LogOut size={17} />Sign out</button>
       </div>
     </aside>
     {mobileOpen && <button aria-label="Close navigation" className="fixed inset-0 z-30 bg-[#173a2a]/20 md:hidden" onClick={() => setMobileOpen(false)} data-testid="button-overlay-menu" />}
     <main className="min-w-0 flex-1">
       <header className="sticky top-0 z-20 flex h-[70px] items-center justify-between border-b border-[#e3eae5] bg-[#f7f8f6]/90 px-5 backdrop-blur-md md:px-10">
         <div className="flex items-center gap-3"><button className="rounded-lg p-2 text-[#52665b] hover:bg-white md:hidden" onClick={() => setMobileOpen(true)} data-testid="button-open-menu"><Menu size={20} /></button><div className="text-xs font-medium text-[#87958d]">{role === 'consumer' ? 'Personal workspace' : 'Regulatory workspace'} <span className="mx-1.5 text-[#cad2cd]">/</span><span className="text-[#3d5146]">{location === '/dashboard' || location === '/inspector/dashboard' ? 'Overview' : 'NutriCheck'}</span></div></div>
-        <div className="flex items-center gap-4"><button className="relative rounded-lg p-2 text-[#607069] hover:bg-white" data-testid="button-notifications"><Bell size={18} /><span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-[#f1ba55]" /></button><div className="hidden h-6 w-px bg-[#dfe7e1] sm:block" /><div className="flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-full bg-[#d9f2e5] text-xs font-bold text-[#12885c]">{role === 'consumer' ? 'AS' : 'RM'}</span><span className="hidden text-sm font-semibold text-[#283d32] sm:block">{role === 'consumer' ? 'Ananya Shah' : 'R. Menon'}</span></div></div>
+         <div className="flex items-center gap-4"><button className="relative rounded-lg p-2 text-[#607069] hover:bg-white" data-testid="button-notifications"><Bell size={18} /><span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-[#f1ba55]" /></button><div className="hidden h-6 w-px bg-[#dfe7e1] sm:block" /><div className="flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-full bg-[#d9f2e5] text-xs font-bold text-[#12885c]">{initials}</span><span className="hidden text-sm font-semibold text-[#283d32] sm:block">{displayName}</span></div></div>
       </header>
       <div className="mx-auto max-w-[1380px] px-5 py-7 md:px-10 md:py-9">{children}</div>
     </main>
@@ -118,12 +199,44 @@ function Landing() {
   </main><footer className="mx-auto flex max-w-6xl flex-col justify-between gap-4 px-6 py-8 text-xs text-[#8b9991] sm:flex-row"><Logo compact /><span>© 2024 NutriCheck · Made for clearer shelves</span></footer></div>;
 }
 
-function AuthPage({ mode, onRoleChange }: { mode: 'login' | 'signup'; onRoleChange?: (role: 'consumer' | 'officer') => void }) {
-  const [, setLocation] = useLocation();
-  const [role, setRole] = useState<'consumer' | 'officer'>('consumer');
-  const [loading, setLoading] = useState(false);
-  const submit = (e: React.FormEvent) => { e.preventDefault(); setLoading(true); setStored('role', role); onRoleChange?.(role); setTimeout(() => setLocation(role === 'consumer' ? '/dashboard' : '/inspector/dashboard'), 550); };
-  return <div className="grid min-h-[100dvh] bg-[#F7F8F6] md:grid-cols-[.86fr_1.14fr]"><div className="relative hidden overflow-hidden bg-[#173a2a] p-12 text-white md:block"><div className="absolute -bottom-28 -left-16 h-80 w-80 rounded-full border-[30px] border-[#18B978]/20" /><div className="absolute right-[-80px] top-[-70px] h-72 w-72 rounded-full border-[28px] border-[#f3ca68]/15" /><Logo /><div className="relative mt-32 max-w-md"><span className="font-mono text-xs text-[#84dcb1]">NUTRICHECK / 2024</span><h1 className="mt-6 text-5xl font-extrabold leading-[1.06] tracking-[-.06em]">The label<br />shouldn't be<br /><span className="text-[#72dfaa]">a puzzle.</span></h1><p className="mt-7 max-w-sm text-sm leading-relaxed text-[#b8d3c5]">A clear-eyed companion for every packaged-food decision — and a sharper workspace for the people who keep the rules moving.</p></div><div className="absolute bottom-10 left-12 flex items-center gap-2 text-xs text-[#9cbbae]"><LockKeyhole size={14} className="text-[#72dfaa]" />Your scans stay private</div></div><div className="flex items-center justify-center p-6 md:p-12"><div className="w-full max-w-[430px]"><Link href="/" className="mb-14 inline-flex md:hidden" data-testid="link-auth-logo"><Logo /></Link><div className="mb-8"><p className="mb-2 text-[11px] font-bold uppercase tracking-[.17em] text-[#18a86f]">{mode === 'login' ? 'Welcome back' : 'Start with clarity'}</p><h2 className="text-3xl font-extrabold tracking-[-.05em] text-[#173a2a]">{mode === 'login' ? 'Good to see you.' : 'Create your account.'}</h2><p className="mt-2 text-sm text-[#75837b]">{mode === 'login' ? 'Pick up where you left off.' : 'A better way to read what you buy.'}</p></div><div className="mb-6 grid grid-cols-2 rounded-lg border border-[#dce7df] bg-white p-1"><button onClick={() => setRole('consumer')} className={`rounded-md py-2.5 text-xs font-bold ${role === 'consumer' ? 'bg-[#dff5e9] text-[#12885c]' : 'text-[#85928a]'}`} data-testid="button-role-consumer"><UserRound size={14} className="mr-1 inline" />Consumer</button><button onClick={() => setRole('officer')} className={`rounded-md py-2.5 text-xs font-bold ${role === 'officer' ? 'bg-[#dff5e9] text-[#12885c]' : 'text-[#85928a]'}`} data-testid="button-role-officer"><ShieldCheck size={14} className="mr-1 inline" />Regulatory officer</button></div><form onSubmit={submit} className="space-y-4">{mode === 'signup' && <Field label="Your name" placeholder="e.g. Ananya Shah" testId="input-name" />}<Field label="Email address" type="email" placeholder="you@example.com" testId="input-email" /><Field label="Password" type="password" placeholder="At least 8 characters" testId="input-password" />{mode === 'signup' && <label className="flex items-start gap-2 pt-1 text-xs text-[#748279]"><input type="checkbox" required className="mt-0.5 accent-[#18B978]" data-testid="input-terms" />I agree to NutriCheck's terms and privacy promise.</label>}<Button type="submit" className="mt-3 w-full" disabled={loading} data-testid={`button-submit-${mode}`}>{loading ? 'Opening your workspace…' : mode === 'login' ? 'Log in' : 'Create account'}<ArrowRight size={16} /></Button></form><p className="mt-6 text-center text-xs text-[#7b8981]">{mode === 'login' ? "New to NutriCheck? " : 'Already have an account? '}<Link href={mode === 'login' ? '/signup' : '/login'} className="font-bold text-[#12885c]" data-testid="link-auth-switch">{mode === 'login' ? 'Create an account' : 'Log in instead'}</Link></p></div></div></div>;
+function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
+  const [role, setRole] = useState<'consumer' | 'officer'>(() => getStored('role', 'consumer'));
+  const authRole = (next: 'consumer' | 'officer') => {
+    setRole(next);
+    setStored('role', next);
+  };
+  return <div className="grid min-h-[100dvh] bg-[#F7F8F6] md:grid-cols-[.86fr_1.14fr]">
+    <div className="relative hidden overflow-hidden bg-[#173a2a] p-12 text-white md:block">
+      <div className="absolute -bottom-28 -left-16 h-80 w-80 rounded-full border-[30px] border-[#18B978]/20" />
+      <div className="absolute right-[-80px] top-[-70px] h-72 w-72 rounded-full border-[28px] border-[#f3ca68]/15" />
+      <Logo />
+      <div className="relative mt-32 max-w-md">
+        <span className="font-mono text-xs text-[#84dcb1]">NUTRICHECK / PRIVATE WORKSPACE</span>
+        <h1 className="mt-6 text-5xl font-extrabold leading-[1.06] tracking-[-.06em]">The label<br />shouldn't be<br /><span className="text-[#72dfaa]">a puzzle.</span></h1>
+        <p className="mt-7 max-w-sm text-sm leading-relaxed text-[#b8d3c5]">A clear-eyed companion for every packaged-food decision — and a sharper workspace for the people who keep the rules moving.</p>
+      </div>
+      <div className="absolute bottom-10 left-12 flex items-center gap-2 text-xs text-[#9cbbae]"><LockKeyhole size={14} className="text-[#72dfaa]" />Your scans stay private</div>
+    </div>
+    <div className="flex items-center justify-center overflow-y-auto p-6 md:p-12">
+      <div className="w-full max-w-[470px]">
+        <div className="mb-8 inline-flex md:hidden" data-testid="link-auth-logo"><Logo /></div>
+        <div className="mb-5">
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-[.17em] text-[#18a86f]">{mode === 'login' ? 'Welcome back' : 'Start with clarity'}</p>
+          <h2 className="text-3xl font-extrabold tracking-[-.05em] text-[#173a2a]">{mode === 'login' ? 'Good to see you.' : 'Create your account.'}</h2>
+          <p className="mt-2 text-sm text-[#75837b]">{mode === 'login' ? 'Pick up where you left off.' : 'A better way to read what you buy.'}</p>
+        </div>
+        <div className="mb-5 grid grid-cols-2 rounded-lg border border-[#dce7df] bg-white p-1">
+          <button onClick={() => authRole('consumer')} className={`rounded-md py-2.5 text-xs font-bold ${role === 'consumer' ? 'bg-[#dff5e9] text-[#12885c]' : 'text-[#85928a]'}`} data-testid="button-role-consumer"><UserRound size={14} className="mr-1 inline" />Consumer</button>
+          <button onClick={() => authRole('officer')} className={`rounded-md py-2.5 text-xs font-bold ${role === 'officer' ? 'bg-[#dff5e9] text-[#12885c]' : 'text-[#85928a]'}`} data-testid="button-role-officer"><ShieldCheck size={14} className="mr-1 inline" />Regulatory officer</button>
+        </div>
+        <div className="rounded-2xl border border-[#dfe9e2] bg-white p-4 shadow-soft md:p-6">
+          {mode === 'login'
+            ? <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} />
+            : <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} />}
+        </div>
+      </div>
+    </div>
+  </div>;
 }
 
 function Field({ label, placeholder, type = 'text', testId, value, onChange }: { label: string; placeholder?: string; type?: string; testId: string; value?: string; onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void }) {
@@ -235,17 +348,89 @@ function AuditPage() {
 function EmptyState({ icon: Icon, title, text }: { icon: typeof ClipboardCheck; title: string; text: string }) { return <div className="rounded-xl border border-dashed border-[#cbdad0] bg-white px-6 py-14 text-center"><span className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-[#eaf8f1] text-[#18B978]"><Icon size={22} /></span><h2 className="mt-4 font-bold text-[#30473a]">{title}</h2><p className="mx-auto mt-2 max-w-sm text-sm text-[#849188]">{text}</p></div>; }
 function NotFoundPage() { return <div className="grid min-h-[100dvh] place-items-center bg-[#F7F8F6] px-6"><div className="max-w-md text-center"><Logo /><div className="mx-auto mt-20 grid h-16 w-16 place-items-center rounded-2xl bg-[#eaf8f1] text-[#18B978]"><Search size={28} /></div><p className="mt-6 font-mono text-xs text-[#18a86f]">404 / NOT IN THE RULEBOOK</p><h1 className="mt-3 text-3xl font-extrabold tracking-[-.05em] text-[#173a2a]">This page took a wrong turn.</h1><p className="mt-3 text-sm leading-relaxed text-[#718078]">The shelf you’re looking for isn’t here. Let’s get you back to a clearer view.</p><Link href="/" className="mt-7 inline-flex items-center gap-2 rounded-lg bg-[#18B978] px-4 py-2.5 text-sm font-bold text-white" data-testid="link-not-found-home"><ArrowLeft size={16} />Back home</Link></div></div>; }
 
+function HomeRedirect() {
+  const { isLoaded, isSignedIn } = useAuth();
+  const role = getStored<'consumer' | 'officer'>('role', 'consumer');
+  if (!isLoaded) return <LoadingScreen />;
+  return isSignedIn
+    ? <Redirect to={role === 'officer' ? '/inspector/dashboard' : '/dashboard'} />
+    : <Landing />;
+}
+
+function LoadingScreen() {
+  return <div className="grid min-h-[100dvh] place-items-center bg-[#F7F8F6]"><div className="flex items-center gap-3 text-sm font-semibold text-[#426050]"><span className="h-3 w-3 animate-pulse rounded-full bg-[#18B978]" />Loading your workspace…</div></div>;
+}
+
+function ProtectedPage({ children }: { children: ReactNode }) {
+  const { isLoaded, isSignedIn } = useAuth();
+  if (!isLoaded) return <LoadingScreen />;
+  if (!isSignedIn) return <Redirect to="/sign-in" />;
+  return <>{children}</>;
+}
+
+function ClerkQueryClientCacheInvalidator() {
+  const { addListener } = useClerk();
+  const prevUserIdRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    const unsubscribe = addListener(({ user }) => {
+      const userId = user?.id ?? null;
+      if (prevUserIdRef.current !== undefined && prevUserIdRef.current !== userId) {
+        queryClient.clear();
+      }
+      prevUserIdRef.current = userId;
+    });
+    return unsubscribe;
+  }, [addListener]);
+  return null;
+}
+
 function Router() {
   const [role, setRole] = useState<'consumer' | 'officer'>(() => getStored('role', 'consumer'));
   const changeRole = (next: 'consumer' | 'officer') => { setRole(next); setStored('role', next); };
   const shell = (node: ReactNode) => <AppShell role={role} setRole={changeRole}>{node}</AppShell>;
   return <RoutedErrorBoundary><Switch>
-    <Route path="/" component={Landing} /><Route path="/login">{() => <AuthPage mode="login" onRoleChange={changeRole} />}</Route><Route path="/signup">{() => <AuthPage mode="signup" onRoleChange={changeRole} />}</Route>
-    <Route path="/dashboard">{() => shell(<ConsumerDashboard />)}</Route><Route path="/upload">{() => shell(<UploadPage />)}</Route><Route path="/extraction">{() => shell(<ExtractionPage />)}</Route><Route path="/analysis/:id">{() => shell(<AnalysisPage />)}</Route><Route path="/complaint/new">{() => shell(<ComplaintNew />)}</Route><Route path="/complaints">{() => shell(<ComplaintsPage />)}</Route><Route path="/reports">{() => shell(<ReportsPage />)}</Route><Route path="/profile">{() => shell(<ProfilePage />)}</Route><Route path="/settings">{() => shell(<SettingsPage />)}</Route>
-    <Route path="/inspector/dashboard">{() => shell(<OfficerDashboard />)}</Route><Route path="/inspector/rules">{() => shell(<RulesPage />)}</Route><Route path="/inspector/complaints">{() => shell(<InspectorComplaints />)}</Route><Route path="/inspector/audit/:id">{() => shell(<AuditPage />)}</Route>
+    <Route path="/" component={HomeRedirect} />
+    <Route path="/sign-in/*?">{() => <AuthPage mode="login" />}</Route>
+    <Route path="/sign-up/*?">{() => <AuthPage mode="signup" />}</Route>
+    <Route path="/login">{() => <Redirect to="/sign-in" />}</Route>
+    <Route path="/signup">{() => <Redirect to="/sign-up" />}</Route>
+    <Route path="/dashboard">{() => <ProtectedPage>{shell(<ConsumerDashboard />)}</ProtectedPage>}</Route>
+    <Route path="/upload">{() => <ProtectedPage>{shell(<UploadPage />)}</ProtectedPage>}</Route>
+    <Route path="/extraction">{() => <ProtectedPage>{shell(<ExtractionPage />)}</ProtectedPage>}</Route>
+    <Route path="/analysis/:id">{() => <ProtectedPage>{shell(<AnalysisPage />)}</ProtectedPage>}</Route>
+    <Route path="/complaint/new">{() => <ProtectedPage>{shell(<ComplaintNew />)}</ProtectedPage>}</Route>
+    <Route path="/complaints">{() => <ProtectedPage>{shell(<ComplaintsPage />)}</ProtectedPage>}</Route>
+    <Route path="/reports">{() => <ProtectedPage>{shell(<ReportsPage />)}</ProtectedPage>}</Route>
+    <Route path="/profile">{() => <ProtectedPage>{shell(<ProfilePage />)}</ProtectedPage>}</Route>
+    <Route path="/settings">{() => <ProtectedPage>{shell(<SettingsPage />)}</ProtectedPage>}</Route>
+    <Route path="/inspector/dashboard">{() => <ProtectedPage>{shell(<OfficerDashboard />)}</ProtectedPage>}</Route>
+    <Route path="/inspector/rules">{() => <ProtectedPage>{shell(<RulesPage />)}</ProtectedPage>}</Route>
+    <Route path="/inspector/complaints">{() => <ProtectedPage>{shell(<InspectorComplaints />)}</ProtectedPage>}</Route>
+    <Route path="/inspector/audit/:id">{() => <ProtectedPage>{shell(<AuditPage />)}</ProtectedPage>}</Route>
     <Route component={NotFoundPage} />
   </Switch></RoutedErrorBoundary>;
 }
 function RoutedErrorBoundary({ children }: { children: ReactNode }) { const [location] = useLocation(); return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>; }
-function App() { return <QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}><Router /></WouterRouter><Toaster /></TooltipProvider></QueryClientProvider>; }
+function ClerkProviderWithRoutes() {
+  const [, setLocation] = useLocation();
+  return <ClerkProvider
+    publishableKey={clerkPubKey}
+    proxyUrl={clerkProxyUrl}
+    appearance={clerkAppearance}
+    signInUrl={`${basePath}/sign-in`}
+    signUpUrl={`${basePath}/sign-up`}
+    localization={{
+      signIn: { start: { title: 'Welcome back', subtitle: 'Sign in to access your account' } },
+      signUp: { start: { title: 'Create your account', subtitle: 'Get started today' } },
+    }}
+    routerPush={(to) => setLocation(stripBase(to))}
+    routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
+  >
+    <QueryClientProvider client={queryClient}>
+      <ClerkQueryClientCacheInvalidator />
+      <Router />
+    </QueryClientProvider>
+  </ClerkProvider>;
+}
+function App() { return <TooltipProvider><WouterRouter base={basePath}><ClerkProviderWithRoutes /></WouterRouter><Toaster /></TooltipProvider>; }
 export default App;
