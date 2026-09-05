@@ -51,7 +51,7 @@ export const products: Product[] = [
 ];
 
 export const initialComplaints: Complaint[] = [
-  { id: 'comp-01', trackingId: 'NC-24-0618-482', productName: 'Aashirvaad Select Atta', retailer: 'Reliance Smart, Koramangala', city: 'Bengaluru', submittedAt: '18 Jun 2024', severity: 'Medium', violations: ['Net quantity is not in the principal display panel'], status: 'Under review', evidence: ['label-front.jpg', 'label-side.jpg'], timeline: [{ label: 'Complaint submitted', date: '18 Jun, 10:48 AM', done: true }, { label: 'Acknowledged by department', date: '18 Jun, 3:12 PM', done: true }, { label: 'Inspection scheduled', date: 'Expected by 22 Jun', done: false }] },
+  { id: 'comp-01', trackingId: 'LA-24-0618-482', productName: 'Aashirvaad Select Atta', retailer: 'Reliance Smart, Koramangala', city: 'Bengaluru', submittedAt: '18 Jun 2024', severity: 'Medium', violations: ['Net quantity is not in the principal display panel'], status: 'Under review', evidence: ['label-front.jpg', 'label-side.jpg'], timeline: [{ label: 'Complaint submitted', date: '18 Jun, 10:48 AM', done: true }, { label: 'Acknowledged by department', date: '18 Jun, 3:12 PM', done: true }, { label: 'Inspection scheduled', date: 'Expected by 22 Jun', done: false }] },
 ];
 
 export const initialRules: Rule[] = [
