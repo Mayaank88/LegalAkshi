@@ -132,12 +132,10 @@ The NutriCheck application expects a Clerk publishable key through:
 VITE_CLERK_PUBLISHABLE_KEY
 ```
 
-## Create the environment file
-
-Create this file:
+## Go to .env.example file 
 
 ``` text
-artifacts/nutricheck/.env
+artifacts/nutricheck/.env.example
 ```
 
 Add:
@@ -158,7 +156,7 @@ with the Publishable Key from your Clerk development application.
 
 Do NOT put your Clerk Secret Key in this variable.
 
-Do NOT commit `.env` to GitHub.
+Do NOT commit `.env.example` to GitHub.
 
 Your `.gitignore` should contain:
 
@@ -170,37 +168,7 @@ Your `.gitignore` should contain:
 
 ------------------------------------------------------------------------
 
-# 6. Optional: Create an Example Environment File
-
-To help other developers configure the project, create:
-
-``` text
-artifacts/nutricheck/.env.example
-```
-
-with:
-
-``` env
-VITE_CLERK_PUBLISHABLE_KEY=
-```
-
-Other developers can then copy it:
-
-``` bash
-cp artifacts/nutricheck/.env.example artifacts/nutricheck/.env
-```
-
-On Windows PowerShell:
-
-``` powershell
-Copy-Item artifacts/nutricheck/.env.example artifacts/nutricheck/.env
-```
-
-Then add their own Clerk Publishable Key.
-
-------------------------------------------------------------------------
-
-# 7. Run the NutriCheck Application
+# 6. Run the LegalAkshi Application
 
 This repository is a pnpm workspace, so run the NutriCheck package from
 the repository root.
