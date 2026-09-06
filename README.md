@@ -1,6 +1,6 @@
-# LegalAkshi / NutriCheck
+# LegalAkshi 
 
-LegalAkshi (NutriCheck) is a Vite + React application for checking
+LegalAkshi is a Vite + React application for checking
 packaged-food labels and presenting compliance information in a simple
 dashboard.
 
